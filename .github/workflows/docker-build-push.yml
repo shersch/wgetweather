@@ -1,10 +1,7 @@
 name: Docker Build and Push
-
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [ main, staging ]
 
 jobs:
   build-and-push:
@@ -12,7 +9,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -27,11 +23,20 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Set Docker image tag
+      id: set-tag
+      run: |
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          echo "IMAGE_TAG=latest" >> $GITHUB_OUTPUT
+        elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+          echo "IMAGE_TAG=staging" >> $GITHUB_OUTPUT
+        fi
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v4
       with:
         context: .
         push: true
         tags: |
-          ghcr.io/${{ github.repository_owner }}/wgetweather:latest
+          ghcr.io/${{ github.repository_owner }}/wgetweather:${{ steps.set-tag.outputs.IMAGE_TAG }}
           ghcr.io/${{ github.repository_owner }}/wgetweather:${{ github.sha }}
